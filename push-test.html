@@ -1,0 +1,150 @@
+﻿<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>تست Push Notification</title>
+<style>
+body{font-family:Tahoma;padding:20px;background:#EEF2F7;direction:rtl}
+.card{background:#fff;padding:16px;border-radius:12px;margin-bottom:12px;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.ok{color:#16A34A;font-weight:800}
+.err{color:#DC2626;font-weight:800}
+.wait{color:#F59E0B;font-weight:800}
+pre{background:#0F172A;color:#E2E8F0;padding:10px;border-radius:8px;overflow-x:auto;font-size:11px;white-space:pre-wrap}
+button{padding:10px 20px;background:#C8102E;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:800;cursor:pointer;margin:4px;font-family:inherit}
+h2{color:#C8102E}
+</style>
+</head>
+<body>
+<h2>🔔 تست Push Notification</h2>
+
+<div class="card" id="c1"><b>۱. Service Worker:</b> <span class="wait">در حال بررسی...</span></div>
+<div class="card" id="c2"><b>۲. Permission:</b> <span class="wait">در حال بررسی...</span></div>
+<div class="card" id="c3"><b>۳. Subscription:</b> <span class="wait">در حال بررسی...</span></div>
+<div class="card" id="c4"><b>۴. PUSH_SERVER:</b> <span class="wait">در حال بررسی...</span></div>
+<div class="card" id="c5"><b>۵. Server /health:</b> <span class="wait">در حال بررسی...</span></div>
+
+<div class="card">
+  <button onclick="enablePush()">🔕 فعال‌سازی Push</button>
+  <button onclick="testPush()">🚀 ارسال Push تستی</button>
+  <button onclick="location.reload()">🔄 رفرش</button>
+</div>
+
+<div class="card" id="log"><b>📋 لاگ:</b><pre id="logBox">-</pre></div>
+
+<script>
+const logBox = document.getElementById('logBox');
+function log(msg) {
+  logBox.textContent += '\n' + new Date().toLocaleTimeString() + ': ' + msg;
+  console.log(msg);
+}
+
+(async () => {
+  try {
+    const regs = await navigator.serviceWorker.getRegistrations();
+    document.getElementById('c1').innerHTML = '<b>۱. Service Worker:</b> <span class="' + (regs.length ? 'ok' : 'err') + '">' + (regs.length ? '✅ ثبت شده (' + regs.length + ')' : '❌ ثبت نشده') + '</span>';
+    log('SW count: ' + regs.length);
+  } catch (e) {
+    document.getElementById('c1').innerHTML = '<b>۱. Service Worker:</b> <span class="err">❌ ' + e.message + '</span>';
+  }
+})();
+
+(() => {
+  const p = Notification.permission;
+  document.getElementById('c2').innerHTML = '<b>۲. Permission:</b> <span class="' + (p === 'granted' ? 'ok' : 'err') + '">' + (p === 'granted' ? '✅ granted' : '❌ ' + p) + '</span>';
+  log('Permission: ' + p);
+})();
+
+(async () => {
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+    document.getElementById('c3').innerHTML = '<b>۳. Subscription:</b> <span class="' + (sub ? 'ok' : 'err') + '">' + (sub ? '✅ فعال' : '❌ غیرفعال') + '</span>';
+    log('Subscription: ' + (sub ? sub.endpoint.substring(0, 50) : 'NONE'));
+  } catch (e) {
+    document.getElementById('c3').innerHTML = '<b>۳. Subscription:</b> <span class="err">❌ ' + e.message + '</span>';
+  }
+})();
+
+(() => {
+  const server = window.location.origin + '/push';
+  document.getElementById('c4').innerHTML = '<b>۴. PUSH_SERVER:</b> <span class="ok">' + server + '</span>';
+  log('PUSH_SERVER: ' + server);
+})();
+
+(async () => {
+  const server = window.location.origin + '/push';
+  try {
+    const r = await fetch(server + '/health');
+    const d = await r.json();
+    document.getElementById('c5').innerHTML = '<b>۵. Server /health:</b> <span class="ok">✅ ' + JSON.stringify(d) + '</span>';
+    log('Server health: ' + JSON.stringify(d));
+  } catch (e) {
+    document.getElementById('c5').innerHTML = '<b>۵. Server /health:</b> <span class="err">❌ ' + e.message + '</span>';
+    log('Server error: ' + e.message);
+  }
+})();
+
+async function enablePush() {
+  log('شروع فعال‌سازی...');
+  try {
+    const perm = await Notification.requestPermission();
+    if (perm !== 'granted') { log('❌ اجازه داده نشد'); return; }
+    const reg = await navigator.serviceWorker.register('/sw.js');
+    await navigator.serviceWorker.ready;
+    log('✅ SW ثبت شد');
+    const server = window.location.origin + '/push';
+    const vapidRes = await fetch(server + '/vapid-public-key');
+    const vapid = await vapidRes.json();
+    log('✅ VAPID گرفته شد');
+    const sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(vapid.publicKey)
+    });
+    log('✅ Subscription ساخته شد');
+    const res = await fetch(server + '/subscribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ subscription: sub.toJSON(), userEmail: 'admin@baspar.local' })
+    });
+    const result = await res.json();
+    log('✅ سرور: ' + JSON.stringify(result));
+    alert('✅ Push فعال شد!');
+  } catch (e) {
+    log('❌ خطا: ' + e.message);
+    alert('❌ خطا: ' + e.message);
+  }
+}
+
+async function testPush() {
+  const server = window.location.origin + '/push';
+  try {
+    const res = await fetch(server + '/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: '🚨 تست Push',
+        body: 'اگر این را می‌بینید، Push کار می‌کند!',
+        tagNo: 'TEST-PUSH',
+        type: 'create',
+        priority: 'urgent'
+      })
+    });
+    const result = await res.json();
+    log('✅ ارسال: ' + JSON.stringify(result));
+    alert('ارسال شد: ' + JSON.stringify(result));
+  } catch (e) {
+    log('❌ خطا: ' + e.message);
+  }
+}
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
+  return outputArray;
+}
+</script>
+</body>
+</html>

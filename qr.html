@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QR Code - Baspar Repair System</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: Tahoma, Arial, sans-serif;
+    background: linear-gradient(160deg, #C8102E 0%, #9B0C23 55%, #5E0715 100%);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    color: #0F172A;
+  }
+  .card {
+    background: #fff;
+    border-radius: 24px;
+    padding: 40px 32px;
+    max-width: 500px;
+    width: 100%;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.35);
+    text-align: center;
+  }
+  .logo {
+    width: 64px;
+    height: 64px;
+    border-radius: 18px;
+    background: linear-gradient(145deg, #C8102E, #9B0C23);
+    color: #fff;
+    display: inline-grid;
+    place-items: center;
+    font-weight: 800;
+    font-size: 22px;
+    margin-bottom: 14px;
+    box-shadow: 0 8px 24px rgba(200,16,46,0.3);
+  }
+  h1 {
+    font-size: 22px;
+    color: #0F172A;
+    font-weight: 800;
+    margin-bottom: 6px;
+  }
+  .subtitle {
+    font-size: 13px;
+    color: #64748B;
+    margin-bottom: 26px;
+    font-weight: 500;
+  }
+  .qr-box {
+    background: #fff;
+    border: 3px solid #E2E8F0;
+    border-radius: 16px;
+    padding: 18px;
+    display: inline-block;
+    margin-bottom: 22px;
+  }
+  .qr-box img {
+    display: block;
+    width: 280px;
+    height: 280px;
+  }
+  .url-box {
+    background: #F8FAFC;
+    border: 2px dashed #CBD5E1;
+    border-radius: 12px;
+    padding: 14px 18px;
+    margin-bottom: 22px;
+  }
+  .url-box .label {
+    font-size: 11px;
+    color: #94A3B8;
+    font-weight: 700;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .url-box .url {
+    font-size: 17px;
+    font-weight: 800;
+    color: #C8102E;
+    font-family: monospace;
+    word-break: break-all;
+  }
+  .steps {
+    text-align: right;
+    background: #F8FAFC;
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-bottom: 20px;
+  }
+  .steps h3 {
+    font-size: 13px;
+    color: #0F172A;
+    margin-bottom: 10px;
+    font-weight: 800;
+  }
+  .steps ol {
+    padding-right: 20px;
+    font-size: 13px;
+    line-height: 1.9;
+    color: #475569;
+  }
+  .steps ol li {
+    margin-bottom: 4px;
+  }
+  .steps ol li b {
+    color: #C8102E;
+  }
+  .btn {
+    width: 100%;
+    padding: 14px;
+    background: linear-gradient(135deg, #C8102E, #9B0C23);
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 800;
+    cursor: pointer;
+    font-family: inherit;
+    box-shadow: 0 6px 20px rgba(200,16,46,0.3);
+    transition: transform 0.15s;
+  }
+  .btn:active { transform: scale(0.98); }
+  .footer {
+    font-size: 10px;
+    color: #94A3B8;
+    margin-top: 16px;
+    font-weight: 600;
+  }
+
+  /* Print styles */
+  @media print {
+    body { background: #fff; padding: 0; }
+    .card { box-shadow: none; border: 2px solid #C8102E; max-width: 100%; padding: 24px; }
+    .btn { display: none; }
+    .qr-box img { width: 320px; height: 320px; }
+  }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">BP</div>
+  <h1>سیستم درخواست تعمیر</h1>
+  <p class="subtitle">BASPAR PLASTICS · Repair Request System</p>
+
+  <div class="qr-box">
+    <img id="qrImage" src="" alt="QR Code">
+  </div>
+
+  <div class="url-box">
+    <div class="label">آدرس سیستم</div>
+    <div class="url" id="urlText">http://172.28.102.114:8090</div>
+  </div>
+
+  <div class="steps">
+    <h3>📱 چطور استفاده کنم؟</h3>
+    <ol>
+      <li>دوربین گوشی را باز کن</li>
+      <li>روی QR Code بالا بگیر</li>
+      <li>روی لینک ظاهر شده بزن</li>
+      <li>با <b>نام کاربری و رمز</b> وارد شو</li>
+      <li>درخواست تعمیر ثبت کن</li>
+    </ol>
+  </div>
+
+  <button class="btn" onclick="window.print()">🖨 چاپ این صفحه</button>
+  <div class="footer">BASPAR PLASTICS · FO-PM-04/03</div>
+</div>
+
+<script>
+// ساخت QR Code از آدرس فعلی صفحه
+// اگر کاربر از کامپیوتر باز کند با 127.0.0.1، آن را به IP شبکه تبدیل می‌کنیم
+(function initQR() {
+  var currentHost = window.location.host;
+  var currentProtocol = window.location.protocol;
+
+  // اگر با localhost باز شده، IP سرور را جایگزین می‌کنیم
+  var baseURL;
+  if (currentHost.indexOf('127.0.0.1') === 0 || currentHost.indexOf('localhost') === 0) {
+    baseURL = currentProtocol + '//172.28.102.114:8090';
+  } else {
+    baseURL = currentProtocol + '//' + currentHost;
+  }
+
+  // نمایش آدرس
+  document.getElementById('urlText').textContent = baseURL;
+
+  // ساخت QR Code با API رایگان
+  var qrSize = 400;
+  var qrURL = 'https://api.qrserver.com/v1/create-qr-code/?size=' + qrSize + 'x' + qrSize +
+              '&data=' + encodeURIComponent(baseURL) +
+              '&margin=0';
+
+  document.getElementById('qrImage').src = qrURL;
+})();
+</script>
+</body>
+</html>

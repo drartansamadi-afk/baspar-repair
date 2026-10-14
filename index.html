@@ -1,7 +1,6 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
-<script src="pocketbase.umd.js"></script>
 <script src="xlsx.full.min.js"></script>
 <script src="dt-codes.js"></script>
 <script src="mold-client.js"></script>
@@ -499,6 +498,160 @@ select.inp{
     order: 3 !important;
   }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
+
+<script>
+// ====== Supabase Shim (injected) ======
+(function(){
+  var SUPABASE_URL = 'https://afklvjfxyhnoutupcady.supabase.co';
+  var SUPABASE_ANON_KEY = 'sb_publishable_o0dzBvlaOctdiMRBduRvYg_aRVZpzkN';
+  
+  if (typeof window.supabase === 'undefined' || !window.supabase.createClient) {
+    console.error('[Shim] Supabase SDK not loaded!');
+    return;
+  }
+  
+  var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  window.supabaseClient = sb;
+  
+  function getTableName(collection) {
+    var map = { 'Lines':'lines','machines':'machines','molds':'molds','spare_parts':'spare_parts',
+      'repair_requests':'repair_requests','repair_parts':'repair_parts','audit_log':'audit_log',
+      'dt_codes_custom':'dt_codes_custom','notifications':'notifications','production_data':'production_data',
+      'quality_data':'quality_data','users':'users_public' };
+    return map[collection] || collection.toLowerCase();
+  }
+  
+  var EXPAND_MAP = { 'line':'lines','machine':'machines','mold':'molds',
+    'reportedBy':'users_public','assignedTo':'users_public','supervisor':'users_public','receivedBy':'users_public' };
+  
+  async function enrichWithExpand(items, expandFields) {
+    if (!expandFields || !items.length) return items;
+    var fields = expandFields.split(',').map(function(f){ return f.trim(); });
+    for (var i = 0; i < fields.length; i++) {
+      var field = fields[i];
+      var tbl = EXPAND_MAP[field];
+      if (!tbl) continue;
+      var ids = []; var seen = {};
+      items.forEach(function(item){ var v = item[field]; if (v && !seen[v]) { seen[v]=true; ids.push(v); }});
+      if (!ids.length) continue;
+      try {
+        var res = await sb.from(tbl).select('*').in('id', ids);
+        if (res.error) continue;
+        var map = {};
+        (res.data || []).forEach(function(r){ map[r.id] = r; });
+        items.forEach(function(item){
+          if (!item.expand) item.expand = {};
+          item.expand[field] = map[item[field]] || null;
+        });
+      } catch(e){ console.error('[Shim] expand error:', e); }
+    }
+    return items;
+  }
+  
+  window.pb = {
+    authStore: {
+      get isValid() { return !!localStorage.getItem('sb-auth'); },
+      save: function(session) { localStorage.setItem('sb-auth', JSON.stringify(session)); },
+      clear: function() { sb.auth.signOut(); localStorage.removeItem('sb-auth'); }
+    },
+    collection: function(name) {
+      var table = getTableName(name);
+      return {
+        getFullList: async function(options) {
+          options = options || {};
+          var query = sb.from(table).select('*');
+          if (options.sort) {
+            var desc = options.sort.charAt(0) === '-';
+            var col = options.sort.replace(/^-/, '');
+            query = query.order(col, { ascending: !desc });
+          }
+          var r = await query;
+          if (r.error) throw r.error;
+          var items = r.data || [];
+          if (options.expand) await enrichWithExpand(items, options.expand);
+          return items;
+        },
+        getList: async function(page, perPage, options) {
+          page = page || 1; perPage = perPage || 200; options = options || {};
+          var start = (page - 1) * perPage;
+          var end = start + perPage - 1;
+          var query = sb.from(table).select('*', { count: 'exact' }).range(start, end);
+          if (options.sort) {
+            var desc = options.sort.charAt(0) === '-';
+            var col = options.sort.replace(/^-/, '');
+            query = query.order(col, { ascending: !desc });
+          }
+          var r = await query;
+          if (r.error) throw r.error;
+          var items = r.data || [];
+          if (options.expand) await enrichWithExpand(items, options.expand);
+          return { items: items, totalItems: r.count || 0, page: page, perPage: perPage };
+        },
+        getOne: async function(id) {
+          var r = await sb.from(table).select('*').eq('id', id).single();
+          if (r.error) throw r.error;
+          return r.data;
+        },
+        create: async function(record) {
+          var r = await sb.from(table).insert(record).select().single();
+          if (r.error) throw r.error;
+          return r.data;
+        },
+        update: async function(id, record) {
+          var r = await sb.from(table).update(record).eq('id', id).select().single();
+          if (r.error) throw r.error;
+          return r.data;
+        },
+        delete: async function(id) {
+          var r = await sb.from(table).delete().eq('id', id);
+          if (r.error) throw r.error;
+        },
+        authWithPassword: async function(email, password) {
+          var r = await sb.auth.signInWithPassword({ email: email, password: password });
+          if (r.error) throw r.error;
+          var session = { access_token: r.data.session.access_token, user: r.data.user };
+          window.pb.authStore.save(session);
+          return {
+            record: {
+              id: r.data.user.id,
+              email: r.data.user.email,
+              fullName: (r.data.user.user_metadata || {}).fullName,
+              role: (r.data.user.user_metadata || {}).role
+            },
+            token: r.data.session.access_token
+          };
+        },
+        authRefresh: async function() {
+          var r = await sb.auth.getUser();
+          if (r.error || !r.data.user) throw new Error('Not authenticated');
+          var user = r.data.user;
+          return {
+            record: {
+              id: user.id,
+              email: user.email,
+              fullName: (user.user_metadata || {}).fullName,
+              role: (user.user_metadata || {}).role
+            }
+          };
+        },
+        subscribe: function(callback) {
+          var channel = sb.channel('rt-' + table + '-' + Date.now())
+            .on('postgres_changes', { event: '*', schema: 'public', table: table }, function(payload){
+              callback({ action: payload.eventType, record: payload.new });
+            })
+            .subscribe();
+          return channel;
+        },
+        unsubscribe: function(channel) { if (channel) sb.removeChannel(channel); }
+      };
+    }
+  };
+  
+  window.supabase = sb;
+  console.log('[Supabase Shim] Loaded successfully. pb and supabase are global.');
+})();
+</script>
 </head>
 <body>
 
@@ -590,7 +743,6 @@ select.inp{
 
 <script>
 /* STATE */
-const pb = new PocketBase(window.location.origin);
 let USER = null;
 let VIEW = 'new';
 let FILTER = 'all';

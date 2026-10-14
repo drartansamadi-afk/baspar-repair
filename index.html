@@ -1,23 +1,22 @@
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="/supabase-config.js"></script>
-
-<script src="/xlsx.full.min.js"></script>
-<script src="/dt-codes.js"></script>
-<script src="/mold-client.js"></script>
-<script src="/production-quality.js"></script>
-<script src="/mode-selector.js"></script>
-<script src="/excel-export.js"></script>
-<script src="/chart.umd.min.js"></script>
-<script src="/dashboard-v2.js"></script>
-<script src="/notifications.js"></script>
-<script src="/push-client.js"></script>
+<script src="pocketbase.umd.js"></script>
+<script src="xlsx.full.min.js"></script>
+<script src="dt-codes.js"></script>
+<script src="mold-client.js"></script>
+<script src="production-quality.js"></script>
+<script src="mode-selector.js"></script>
+<script src="excel-export.js"></script>
+<script src="chart.umd.min.js"></script>
+<script src="dashboard-v2.js"></script>
+<script src="notifications.js"></script>
+<script src="push-client.js"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#C8102E">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Baspar Repair System</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -587,11 +586,11 @@ select.inp{
 
 <div id="toastWrap"></div>
 
-try { await loadScript('/jsQR.js'); } catch(e){ errBox.innerHTML = '⚠️ خطا در بارگذاری کتابخانه QR'; errBox.classList.add('show'); return; }
+
 
 <script>
 /* STATE */
-
+const pb = new PocketBase(window.location.origin);
 let USER = null;
 let VIEW = 'new';
 let FILTER = 'all';
@@ -1218,7 +1217,7 @@ function openDetail(id){
   if(r.status==='IN_PROGRESS' && (isAssigned || canSup)) actions.push(`<button class="btn btn-orange" data-act="finish">✅ پایان + گزارش</button>`);
   if(r.status==='SUPERVISOR_REVIEW' && canSup) actions.push(`<button class="btn btn-blue" data-act="verify">✅ تایید سرپرست</button>`);
   if(r.status==='DELIVERED') actions.push(`<button class="btn btn-green" data-act="deliver">📦 تحویل و بستن</button>`);
-  actions.push(`<button class="btn btn-ghost" onclick="window.open('/print-tag.html?tag=${encodeURIComponent(r.tagNo)}','_blank')">🖨 چاپ تگ</button>`);
+  actions.push(`<button class="btn btn-ghost" onclick="window.open("print-tag.html?tag=${encodeURIComponent(r.tagNo)}','_blank')">🖨 چاپ تگ</button>`);
   if(USER.role==='admin' || USER.role==='supervisor') {
     actions.push(`<button class="btn btn-orange" data-act="edit">✏️ ویرایش</button>`);
     if(USER.role==='admin') actions.push(`<button class="btn btn-red" data-act="delete">🗑 حذف</button>`);
@@ -1492,9 +1491,7 @@ async function openQRScanner(){
   }
 
   if(typeof jsQR === 'undefined'){
-   try { await loadScript('/jsQR.js'); }
-
-    catch(e){ errBox.innerHTML = '⚠️ خطا در بارگذاری کتابخانه QR'; errBox.classList.add('show'); return; }
+   
   }
 
   try {
@@ -1629,56 +1626,10 @@ function handleQRResult(data){
 
 /* EXPORT EXCEL */
 /* AUTO LOGIN */
-
-/* AUTO LOGIN */
 (async function init(){
-  supabase.auth.getSession().then(async ({ data: { session } }) => {
-    if (session) {
-      try {
-        const auth = await pb.collection('users').authRefresh();
-        USER = { id: auth.record.id, name: auth.record.fullName, role: auth.record.role, email: auth.record.email };
-        
-        if (typeof registerServiceWorker === 'function') setTimeout(registerServiceWorker, 1000);
-        if (typeof updatePushButton === 'function') setTimeout(updatePushButton, 1500);
-        if (typeof startNotifPolling === 'function') setTimeout(startNotifPolling, 2000);
-        if (typeof startRequestsPolling === 'function') setTimeout(startRequestsPolling, 2500);
-        if (typeof startRequestsRealtime === 'function') setTimeout(startRequestsRealtime, 1500);
-        if (typeof autoReSubscribe === 'function') setTimeout(autoReSubscribe, 3000);
-        if (typeof showModeSelector === 'function') setTimeout(function(){ if(USER && !window.CURRENT_MODE) showModeSelector(); }, 500);
-        
-        setTimeout(function() {
-          var pushBtn = document.getElementById('pushToggleBtn');
-          if (pushBtn) {
-            pushBtn.onclick = async function() {
-              var enabled = await checkPushStatus();
-              if (enabled) { await disablePushNotifications(); } else { await enablePushNotifications(); }
-              await updatePushButton();
-            };
-          }
-        }, 1500);
-        
-        setTimeout(function() {
-          var excelBtn = document.getElementById('excelBtn');
-          if (excelBtn && ['supervisor','manager','admin'].includes(USER.role)) {
-            excelBtn.style.display = 'inline-flex';
-          }
-        }, 100);
-
-        document.getElementById('loginScreen').style.display = 'none';
-        document.getElementById('app').classList.add('show');
-        document.getElementById('hdrSub').textContent = USER.name + ' · ' + roleLabel(USER.role);
-        await loadMasterData();
-        await loadRequests();
-        render();
-      } catch(e) {
-        console.error('Auto login error:', e);
-        pb.authStore.clear();
-      }
-    }
-  });
-})();
-
-
+  if(pb.authStore.isValid){
+    try {
+      const auth = await pb.collection('users').authRefresh();
       USER = { id: auth.record.id, name: auth.record.fullName, role: auth.record.role, email: auth.record.email };
   // === Push & Polling Setup ===
   if (typeof registerServiceWorker === 'function') setTimeout(registerServiceWorker, 1000);
@@ -1716,7 +1667,7 @@ setTimeout(() => {
       render();
     } catch(e){ pb.authStore.clear(); }
   }
-
+})();
 
 // ===== بارگذاری قطعات مصرفی =====
 async function loadRepairParts(requestId) {
@@ -4245,25 +4196,3 @@ window.showDTPicker = function(containerId, currentCode, currentDuration, autoMi
 </script>
 </body>
 </html>
-
-
-
-// ===== EXPORT EXCEL MASTER =====
-
-
-
-// ===== حذف دکمه Excel از داشبورد =====
-setTimeout(function() {
-  var btns = document.querySelectorAll('button');
-  btns.forEach(function(b) {
-    if (b.textContent && (b.textContent.includes('خروجی Excel') || b.textContent.includes('گزارش تغییرات'))) {
-      if (b.id === 'auditLogBtn') return;
-      b.style.display = 'none';
-    }
-  });
-}, 1000);
-// ============================================
-// EXPORT EXCEL - CLEAN VERSION
-// ============================================
-
-// ============ END EXPORT EXCEL ============

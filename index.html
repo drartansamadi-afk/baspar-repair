@@ -3,7 +3,7 @@
 <head>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="/supabase-config.js"></script>
-<script src="/pocketbase.umd.js"></script>
+
 <script src="/xlsx.full.min.js"></script>
 <script src="/dt-codes.js"></script>
 <script src="/mold-client.js"></script>
@@ -587,7 +587,7 @@ select.inp{
 
 <div id="toastWrap"></div>
 
-try { await loadScript('/jsQR.js'); } catch(e){ errBox.innerHTML = '⚠️ خطا در بارگذاری کتابخانه QR'; errBox.classList.add('show'); return; }
+
 
 <script>
 /* STATE */
@@ -1492,9 +1492,7 @@ async function openQRScanner(){
   }
 
   if(typeof jsQR === 'undefined'){
-   try { await loadScript('/jsQR.js'); }
-
-    catch(e){ errBox.innerHTML = '⚠️ خطا در بارگذاری کتابخانه QR'; errBox.classList.add('show'); return; }
+   
   }
 
   try {
@@ -1629,59 +1627,53 @@ function handleQRResult(data){
 
 /* EXPORT EXCEL */
 /* AUTO LOGIN */
+
+/* AUTO LOGIN */
 (async function init(){
-supabase.auth.getSession().then(async ({ data: { session } }) => {
-  if (session) {
-    const auth = await pb.collection('users').authRefresh();
-    USER = { id: auth.record.id, name: auth.record.fullName, role: auth.record.role, email: auth.record.email };
-    document.getElementById('loginScreen').style.display = 'none';
-    document.getElementById('app').classList.add('show');
-    document.getElementById('hdrSub').textContent = USER.name + ' · ' + roleLabel(USER.role);
-    await loadMasterData();
-    await loadRequests();
-    render();
-  }
-});
+  supabase.auth.getSession().then(async ({ data: { session } }) => {
+    if (session) {
+      try {
+        const auth = await pb.collection('users').authRefresh();
+        USER = { id: auth.record.id, name: auth.record.fullName, role: auth.record.role, email: auth.record.email };
+        
+        if (typeof registerServiceWorker === 'function') setTimeout(registerServiceWorker, 1000);
+        if (typeof updatePushButton === 'function') setTimeout(updatePushButton, 1500);
+        if (typeof startNotifPolling === 'function') setTimeout(startNotifPolling, 2000);
+        if (typeof startRequestsPolling === 'function') setTimeout(startRequestsPolling, 2500);
+        if (typeof startRequestsRealtime === 'function') setTimeout(startRequestsRealtime, 1500);
+        if (typeof autoReSubscribe === 'function') setTimeout(autoReSubscribe, 3000);
+        if (typeof showModeSelector === 'function') setTimeout(function(){ if(USER && !window.CURRENT_MODE) showModeSelector(); }, 500);
+        
+        setTimeout(function() {
+          var pushBtn = document.getElementById('pushToggleBtn');
+          if (pushBtn) {
+            pushBtn.onclick = async function() {
+              var enabled = await checkPushStatus();
+              if (enabled) { await disablePushNotifications(); } else { await enablePushNotifications(); }
+              await updatePushButton();
+            };
+          }
+        }, 1500);
+        
+        setTimeout(function() {
+          var excelBtn = document.getElementById('excelBtn');
+          if (excelBtn && ['supervisor','manager','admin'].includes(USER.role)) {
+            excelBtn.style.display = 'inline-flex';
+          }
+        }, 100);
 
-    try {
-      const auth = await pb.collection('users').authRefresh();
-      USER = { id: auth.record.id, name: auth.record.fullName, role: auth.record.role, email: auth.record.email };
-  // === Push & Polling Setup ===
-  if (typeof registerServiceWorker === 'function') setTimeout(registerServiceWorker, 1000);
-  if (typeof updatePushButton === 'function') setTimeout(updatePushButton, 1500);
-  if (typeof startNotifPolling === 'function') setTimeout(startNotifPolling, 2000);
-  if (typeof startRequestsPolling === 'function') setTimeout(startRequestsPolling, 2500);
-  if (typeof startRequestsRealtime === 'function') setTimeout(startRequestsRealtime, 1500);
-  if (typeof autoReSubscribe === 'function') setTimeout(autoReSubscribe, 3000);
-  // حالت انتخاب mode
-  if (typeof showModeSelector === 'function') setTimeout(function(){ if(USER && !window.CURRENT_MODE) showModeSelector(); }, 500);
-  // دکمه Push
-  setTimeout(() => {
-    const pushBtn = document.getElementById('pushToggleBtn');
-    if (pushBtn) {
-      pushBtn.onclick = async () => {
-        const enabled = await checkPushStatus();
-        if (enabled) { await disablePushNotifications(); } else { await enablePushNotifications(); }
-        await updatePushButton();
-      };
+        document.getElementById('loginScreen').style.display = 'none';
+        document.getElementById('app').classList.add('show');
+        document.getElementById('hdrSub').textContent = USER.name + ' · ' + roleLabel(USER.role);
+        await loadMasterData();
+        await loadRequests();
+        render();
+      } catch(e) {
+        console.error('Auto login error:', e);
+        pb.authStore.clear();
+      }
     }
-  }, 1500);
-// نمایش دکمه Excel فقط برای نقش‌های مجاز
-setTimeout(() => {
-  const excelBtn = document.getElementById('excelBtn');
-  if (excelBtn && ['supervisor','manager','admin'].includes(USER.role)) {
-    excelBtn.style.display = 'inline-flex';
-  }
-}, 100);
-
-      document.getElementById('loginScreen').style.display = 'none';
-      document.getElementById('app').classList.add('show');
-      document.getElementById('hdrSub').textContent = USER.name + ' · ' + roleLabel(USER.role);
-      await loadMasterData();
-      await loadRequests();
-      render();
-    } catch(e){ pb.authStore.clear(); }
-  }
+  });
 })();
 
 // ===== بارگذاری قطعات مصرفی =====

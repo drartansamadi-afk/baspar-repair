@@ -4171,10 +4171,11 @@ window.showDTPicker = function(containerId, currentCode, currentDuration, autoMi
 };
 // ===== END LABEL FIX =====
 </script>
+
 <script>
-// ===== UI PATCH: Logout Button & Mold Fallback =====
+// ===== UI PATCH v2: Logout Button & Definitive Mold Dropdown =====
 (function() {
-  // 1. Add floating logout button for mode-selector
+  // 1. Logout Button
   window.addEventListener('load', function() {
     var checkHeader = setInterval(function() {
       if (document.body.classList.contains('mode-selector-active')) {
@@ -4201,31 +4202,36 @@ window.showDTPicker = function(containerId, currentCode, currentDuration, autoMi
     }, 1000);
   });
 
-  // 2. Mold Picker Fallback
-  var originalShowMoldPicker = window.showMoldPicker;
+  // 2. Definitive Mold Picker Override (Bypasses mold-client.js entirely)
   window.showMoldPicker = async function(selectedId) {
-    if (originalShowMoldPicker) {
-      try { originalShowMoldPicker(selectedId); } catch(e) { console.error('MoldPicker error:', e); }
-    }
-    
-    setTimeout(async function() {
-      var box = document.getElementById('moldPickerBox');
-      if (box && box.innerHTML.trim() === '' && window.pb) {
-        try {
-          var res = await window.pb.collection('molds').getFullList({ sort: 'code' });
-          if (res && res.length > 0) {
-            var html = '<select class="inp" id="moldSelectedId" style="width:100%; border:2px solid #E2E8F0; border-radius:12px; padding:12px; font-family:inherit;">';
-            html += '<option value="">— بدون قالب —</option>';
-            res.forEach(function(m) {
-              html += '<option value="' + m.id + '" ' + (m.id === selectedId ? 'selected' : '') + '>' + (m.code || '') + ' - ' + (m.nameFa || m.name || '') + '</option>';
-            });
-            html += '</select>';
-            box.innerHTML = html;
-          }
-        } catch(e) { console.error('Fallback mold fetch error:', e); }
+    var box = document.getElementById('moldPickerBox');
+    if (!box) return;
+
+    box.innerHTML = '<div style="text-align:center;padding:10px;color:#94A3B8">در حال بارگذاری قالب‌ها...</div>';
+
+    try {
+      var res = await window.pb.collection('molds').getFullList({ sort: 'code' });
+      if (res && res.length > 0) {
+        var html = '<select class="inp" id="moldSelectedId" style="width:100%; border:2px solid #E2E8F0; border-radius:12px; padding:12px; font-family:inherit;">';
+        html += '<option value="">— بدون قالب —</option>';
+        res.forEach(function(m) {
+          var isSel = (m.id === selectedId) ? 'selected' : '';
+          html += '<option value="' + m.id + '" ' + isSel + '>' + (m.code || '') + ' - ' + (m.nameFa || m.name || '') + '</option>';
+        });
+        html += '</select>';
+        box.innerHTML = html;
+      } else {
+        box.innerHTML = '<div style="text-align:center;padding:10px;color:#94A3B8">قالبی یافت نشد</div>';
       }
-    }, 500);
+    } catch(e) {
+      console.error('Mold Fetch Error:', e);
+      box.innerHTML = '<div style="text-align:center;padding:10px;color:#DC2626">خطا در بارگذاری قالب‌ها</div>';
+    }
   };
+
+  // Disable the old loader to prevent conflicts
+  window.loadMolds = function() {};
+  window.MOLDS_LOADED = true;
 })();
 </script>
 </body>

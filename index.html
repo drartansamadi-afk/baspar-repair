@@ -1,87 +1,11 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
 
+<script src="supabase-config.js"></script>
 
-<script>
-// ====== Supabase Shim (Clean) ======
-(function(){
-  var SUPABASE_URL = 'https://afklvjfxyhnoutupcady.supabase.co';
-  var SUPABASE_ANON_KEY = 'sb_publishable_o0dzBvlaOctdiMRBduRvYg_aRVZpzkN';
-  if (typeof window.supabase === 'undefined' || !window.supabase.createClient) {
-    console.error('[Shim] Supabase SDK not loaded!');
-    return;
-  }
-  var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  function getTableName(c) {
-    var m = { 'Lines':'lines','machines':'machines','molds':'molds','spare_parts':'spare_parts','repair_requests':'repair_requests','repair_parts':'repair_parts','audit_log':'audit_log','dt_codes_custom':'dt_codes_custom','notifications':'notifications','production_data':'production_data','quality_data':'quality_data','users':'users_public' };
-    return m[c] || c.toLowerCase();
-  }
-  var EXPAND_MAP = { 'line':'lines','machine':'machines','mold':'molds','reportedBy':'users_public','assignedTo':'users_public','supervisor':'users_public','receivedBy':'users_public' };
-  async function enrich(items, fields) {
-    if (!fields || !items.length) return items;
-    var flds = fields.split(',').map(function(f){ return f.trim(); });
-    for (var i = 0; i < flds.length; i++) {
-      var f = flds[i]; var tbl = EXPAND_MAP[f]; if (!tbl) continue;
-      var ids = []; var seen = {};
-      items.forEach(function(x){ var v = x[f]; if (v && !seen[v]) { seen[v]=1; ids.push(v); }});
-      if (!ids.length) continue;
-      try {
-        var r = await sb.from(tbl).select('*').in('id', ids);
-        if (r.error) continue;
-        var map = {}; (r.data || []).forEach(function(x){ map[x.id] = x; });
-        items.forEach(function(x){ if (!x.expand) x.expand = {}; x.expand[f] = map[x[f]] || null; });
-      } catch(e){}
-    }
-    return items;
-  }
-  window.pb = {
-    authStore: {
-      get isValid() { return !!localStorage.getItem('sb-auth'); },
-      save: function(s) { localStorage.setItem('sb-auth', JSON.stringify(s)); },
-      clear: function() { sb.auth.signOut(); localStorage.removeItem('sb-auth'); }
-    },
-    collection: function(name) {
-      var t = getTableName(name);
-      return {
-        getFullList: async function(o) {
-          o = o || {}; var q = sb.from(t).select('*');
-          if (o.sort) { var d = o.sort.charAt(0)==='-'; var c = o.sort.replace(/^-/,''); q = q.order(c, { ascending: !d }); }
-          var r = await q; if (r.error) throw r.error;
-          var it = r.data || []; if (o.expand) await enrich(it, o.expand); return it;
-        },
-        getList: async function(p, pp, o) {
-          p = p||1; pp = pp||200; o = o||{}; var st = (p-1)*pp; var en = st+pp-1;
-          var q = sb.from(t).select('*', { count: 'exact' }).range(st, en);
-          if (o.sort) { var d = o.sort.charAt(0)==='-'; var c = o.sort.replace(/^-/,''); q = q.order(c, { ascending: !d }); }
-          var r = await q; if (r.error) throw r.error;
-          var it = r.data || []; if (o.expand) await enrich(it, o.expand);
-          return { items: it, totalItems: r.count || 0, page: p, perPage: pp };
-        },
-        getOne: async function(id) { var r = await sb.from(t).select('*').eq('id', id).single(); if (r.error) throw r.error; return r.data; },
-        create: async function(rec) { var r = await sb.from(t).insert(rec).select().single(); if (r.error) throw r.error; return r.data; },
-        update: async function(id, rec) { var r = await sb.from(t).update(rec).eq('id', id).select().single(); if (r.error) throw r.error; return r.data; },
-        delete: async function(id) { var r = await sb.from(t).delete().eq('id', id); if (r.error) throw r.error; },
-        authWithPassword: async function(e, p) {
-          var r = await sb.auth.signInWithPassword({ email: e, password: p }); if (r.error) throw r.error;
-          window.pb.authStore.save({ access_token: r.data.session.access_token, user: r.data.user });
-          return { record: { id: r.data.user.id, email: r.data.user.email, fullName: (r.data.user.user_metadata||{}).fullName, role: (r.data.user.user_metadata||{}).role }, token: r.data.session.access_token };
-        },
-        authRefresh: async function() {
-          var r = await sb.auth.getUser(); if (r.error || !r.data.user) throw new Error('Not authenticated');
-          var u = r.data.user; return { record: { id: u.id, email: u.email, fullName: (u.user_metadata||{}).fullName, role: (u.user_metadata||{}).role } };
-        },
-        subscribe: function(cb) { return sb.channel('rt-' + t + '-' + Date.now()).on('postgres_changes', { event: '*', schema: 'public', table: t }, function(p){ cb({ action: p.eventType, record: p.new }); }).subscribe(); },
-        unsubscribe: function(ch) { if (ch) sb.removeChannel(ch); }
-      };
-    }
-  };
-  window.supabase = sb;
-  console.log('[Supabase Shim] Loaded successfully.');
-})();
-</script>
 
 <script src="xlsx.full.min.js"></script>
 <script src="dt-codes.js"></script>
@@ -2758,7 +2682,7 @@ window.openDetail = function(id){
   if(r.status==='IN_PROGRESS' && (isAssigned || canSup)) actions.push('<button class="btn btn-orange" data-act="finish">✅ پایان + گزارش</button>');
   if(r.status==='SUPERVISOR_REVIEW' && canSup) actions.push('<button class="btn btn-blue" data-act="verify">✅ تایید سرپرست</button>');
   if(r.status==='DELIVERED') actions.push('<button class="btn btn-green" data-act="deliver">📦 تحویل و بستن</button>');
-  actions.push('<button class="btn btn-ghost" onclick="window.open(\'/print-tag.html?tag=' + encodeURIComponent(r.tagNo) + '\',\'_blank\')">🖨 چاپ تگ</button>');
+  actions.push('<button class="btn btn-ghost" onclick="window.open(\'print-tag.html?tag=' + encodeURIComponent(r.tagNo) + '\',\'_blank\')">🖨 چاپ تگ</button>');
   if(USER.role==='admin' || USER.role==='supervisor') {
     actions.push('<button class="btn btn-orange" data-act="edit">✏️ ویرایش</button>');
     if(USER.role==='admin') actions.push('<button class="btn btn-red" data-act="delete">🗑 حذف</button>');
@@ -3540,7 +3464,7 @@ window.openDetail = function(id){
   if(r.status==='IN_PROGRESS' && (isAssigned || canSup)) actions.push('<button class="btn btn-orange" data-act="finish">✅ پایان + گزارش</button>');
   if(r.status==='SUPERVISOR_REVIEW' && canSup) actions.push('<button class="btn btn-blue" data-act="verify">✅ تایید سرپرست</button>');
   if(r.status==='DELIVERED') actions.push('<button class="btn btn-green" data-act="deliver">📦 تحویل و بستن</button>');
-  actions.push('<button class="btn btn-ghost" onclick="window.open(\'/print-tag.html?tag=' + encodeURIComponent(r.tagNo) + '\',\'_blank\')">🖨 چاپ تگ</button>');
+  actions.push('<button class="btn btn-ghost" onclick="window.open(\'print-tag.html?tag=' + encodeURIComponent(r.tagNo) + '\',\'_blank\')">🖨 چاپ تگ</button>');
   if(USER.role==='admin' || USER.role==='supervisor') {
     actions.push('<button class="btn btn-orange" data-act="edit">✏️ ویرایش</button>');
     if(USER.role==='admin') actions.push('<button class="btn btn-red" data-act="delete">🗑 حذف</button>');

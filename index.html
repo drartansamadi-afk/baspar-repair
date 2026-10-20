@@ -700,7 +700,7 @@ setTimeout(() => {
   
   document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('app').classList.add('show');
-    document.getElementById('hdrSub').textContent = USER.name + ' · ' + roleLabel(USER.role);
+    document.getElementById('hdrSub').textContent = USER.name === roleLabel(USER.role) ? USER.name : USER.name + ' · ' + roleLabel(USER.role);
     await loadMasterData();
     await loadRequests();
     render();
@@ -1638,7 +1638,7 @@ function handleQRResult(data){
       USER = { id: auth.record.id, name: auth.record.fullName, role: auth.record.role, email: auth.record.email };
       document.getElementById('loginScreen').style.display = 'none';
       document.getElementById('app').classList.add('show');
-      document.getElementById('hdrSub').textContent = USER.name + ' · ' + roleLabel(USER.role);
+      document.getElementById('hdrSub').textContent = USER.name === roleLabel(USER.role) ? USER.name : USER.name + ' · ' + roleLabel(USER.role);
       await loadMasterData();
       await loadRequests();
       render();
@@ -4170,6 +4170,63 @@ window.showDTPicker = function(containerId, currentCode, currentDuration, autoMi
   }, 200);
 };
 // ===== END LABEL FIX =====
+</script>
+<script>
+// ===== UI PATCH: Logout Button & Mold Fallback =====
+(function() {
+  // 1. Add floating logout button for mode-selector
+  window.addEventListener('load', function() {
+    var checkHeader = setInterval(function() {
+      if (document.body.classList.contains('mode-selector-active')) {
+        if (!document.getElementById('floatingLogoutBtn')) {
+          var btn = document.createElement('button');
+          btn.id = 'floatingLogoutBtn';
+          btn.innerHTML = '⏻ خروج';
+          btn.style.cssText = 'position:fixed; top:20px; left:20px; z-index:9999; background:#C8102E; color:#fff; border-radius:12px; padding:8px 16px; font-weight:bold; display:flex; align-items:center; gap:8px; box-shadow:0 4px 12px rgba(200,16,46,0.3); border:none; cursor:pointer; font-family:inherit; font-size:14px; transition: 0.2s;';
+          btn.onmouseover = function() { btn.style.transform = 'scale(1.05)'; };
+          btn.onmouseout = function() { btn.style.transform = 'scale(1)'; };
+          btn.onclick = function() {
+            if(confirm('از حساب خارج می‌شوید؟')) {
+              if (window.pb && window.pb.authStore) window.pb.authStore.clear();
+              localStorage.removeItem('sb-auth');
+              location.reload();
+            }
+          };
+          document.body.appendChild(btn);
+        }
+      } else {
+        var existingBtn = document.getElementById('floatingLogoutBtn');
+        if (existingBtn) existingBtn.remove();
+      }
+    }, 1000);
+  });
+
+  // 2. Mold Picker Fallback
+  var originalShowMoldPicker = window.showMoldPicker;
+  window.showMoldPicker = async function(selectedId) {
+    if (originalShowMoldPicker) {
+      try { originalShowMoldPicker(selectedId); } catch(e) { console.error('MoldPicker error:', e); }
+    }
+    
+    setTimeout(async function() {
+      var box = document.getElementById('moldPickerBox');
+      if (box && box.innerHTML.trim() === '' && window.pb) {
+        try {
+          var res = await window.pb.collection('molds').getFullList({ sort: 'code' });
+          if (res && res.length > 0) {
+            var html = '<select class="inp" id="moldSelectedId" style="width:100%; border:2px solid #E2E8F0; border-radius:12px; padding:12px; font-family:inherit;">';
+            html += '<option value="">— بدون قالب —</option>';
+            res.forEach(function(m) {
+              html += '<option value="' + m.id + '" ' + (m.id === selectedId ? 'selected' : '') + '>' + (m.code || '') + ' - ' + (m.nameFa || m.name || '') + '</option>';
+            });
+            html += '</select>';
+            box.innerHTML = html;
+          }
+        } catch(e) { console.error('Fallback mold fetch error:', e); }
+      }
+    }, 500);
+  };
+})();
 </script>
 </body>
 </html>

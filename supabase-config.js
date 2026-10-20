@@ -60,7 +60,7 @@
     if (!out.id) out.id = genId();
     if (t === 'repair_requests') {
       if (!out.created) out.created = nowISO();
-      if (!out.tagNo) out.tagNo = 'TAG-' + new Date().toISOString().slice(0,10).replace(/-/g,'') + '-' + Math.random().toString(36).slice(2,6).toUpperCase();
+      if (!out.tagNo) out.tagNo = 'TAG-' + new Date().toISOString().slice(0,10).replace(/-/g,'') + '-' + Math.floor(1000 + Math.random() * 9000);
     }
     if (t === 'repair_parts' || t === 'audit_log') {
       if (!out.created) out.created = nowISO();

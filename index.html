@@ -4172,43 +4172,15 @@ window.showDTPicker = function(containerId, currentCode, currentDuration, autoMi
 // ===== END LABEL FIX =====
 </script>
 
-<script>
-// ===== UI PATCH v2: Logout Button & Definitive Mold Dropdown =====
-(function() {
-  // 1. Logout Button
-  window.addEventListener('load', function() {
-    var checkHeader = setInterval(function() {
-      if (document.body.classList.contains('mode-selector-active')) {
-        if (!document.getElementById('floatingLogoutBtn')) {
-          var btn = document.createElement('button');
-          btn.id = 'floatingLogoutBtn';
-          btn.innerHTML = '⏻ خروج';
-          btn.style.cssText = 'position:fixed; top:20px; left:20px; z-index:9999; background:#C8102E; color:#fff; border-radius:12px; padding:8px 16px; font-weight:bold; display:flex; align-items:center; gap:8px; box-shadow:0 4px 12px rgba(200,16,46,0.3); border:none; cursor:pointer; font-family:inherit; font-size:14px; transition: 0.2s;';
-          btn.onmouseover = function() { btn.style.transform = 'scale(1.05)'; };
-          btn.onmouseout = function() { btn.style.transform = 'scale(1)'; };
-          btn.onclick = function() {
-            if(confirm('از حساب خارج می‌شوید؟')) {
-              if (window.pb && window.pb.authStore) window.pb.authStore.clear();
-              localStorage.removeItem('sb-auth');
-              location.reload();
-            }
-          };
-          document.body.appendChild(btn);
-        }
-      } else {
-        var existingBtn = document.getElementById('floatingLogoutBtn');
-        if (existingBtn) existingBtn.remove();
-      }
-    }, 1000);
-  });
 
-  // 2. Definitive Mold Picker Override (Bypasses mold-client.js entirely)
+<script>
+// ===== UI PATCH v3: Context-Aware Back/Logout & Mold Fix =====
+(function() {
+  // 1. Mold Picker Override (Keep working solution)
   window.showMoldPicker = async function(selectedId) {
     var box = document.getElementById('moldPickerBox');
     if (!box) return;
-
     box.innerHTML = '<div style="text-align:center;padding:10px;color:#94A3B8">در حال بارگذاری قالب‌ها...</div>';
-
     try {
       var res = await window.pb.collection('molds').getFullList({ sort: 'code' });
       if (res && res.length > 0) {
@@ -4228,10 +4200,82 @@ window.showDTPicker = function(containerId, currentCode, currentDuration, autoMi
       box.innerHTML = '<div style="text-align:center;padding:10px;color:#DC2626">خطا در بارگذاری قالب‌ها</div>';
     }
   };
-
-  // Disable the old loader to prevent conflicts
   window.loadMolds = function() {};
   window.MOLDS_LOADED = true;
+
+  // 2. Context-Aware Top Action Button (Logout on Mode Select, Back inside tabs)
+  function updateTopButton() {
+    var loginScreen = document.getElementById('loginScreen');
+    // Hide entirely on login screen
+    if (loginScreen && loginScreen.style.display !== 'none') {
+      removeBtn();
+      return; 
+    }
+
+    var body = document.body;
+    var btn = document.getElementById('topActionBtn');
+
+    if (body.classList.contains('mode-selector-active')) {
+      // 1. Mode Selector: Show Logout
+      if (!btn) btn = createBtn();
+      btn.innerHTML = '⏻ خروج';
+      btn.style.background = '#C8102E';
+      btn.style.color = '#fff';
+      btn.style.border = 'none';
+      btn.onclick = function() {
+        if(confirm('از حساب خارج می‌شوید؟')) {
+          if (window.pb && window.pb.authStore) window.pb.authStore.clear();
+          localStorage.removeItem('sb-auth');
+          location.reload();
+        }
+      };
+      btn.style.display = 'flex';
+    } else if (body.classList.contains('mode-repair') || body.classList.contains('mode-production') || body.classList.contains('mode-quality')) {
+      // 2. Sub-pages: Show Back
+      if (!btn) btn = createBtn();
+      btn.innerHTML = '→ بازگشت';
+      btn.style.background = '#FFFFFF';
+      btn.style.color = '#0F172A';
+      btn.style.border = '1px solid #CBD5E1';
+      btn.onclick = function() {
+        if (typeof window.showModeSelector === 'function') {
+          window.showModeSelector();
+        }
+      };
+      btn.style.display = 'flex';
+    } else {
+      // Other states
+      removeBtn();
+    }
+  }
+
+  function createBtn() {
+    var b = document.createElement('button');
+    b.id = 'topActionBtn';
+    // Clean, polished UI based on the app's design language
+    b.style.cssText = 'position:fixed; top:calc(12px + env(safe-area-inset-top,0px)); left:16px; z-index:9999; padding:8px 18px; border-radius:24px; font-family:inherit; font-size:13px; font-weight:700; display:none; align-items:center; gap:6px; box-shadow:0 4px 12px rgba(15,23,42,0.08); cursor:pointer; transition:all 0.2s;';
+    b.onmouseover = function() { b.style.transform = 'scale(1.05)'; b.style.boxShadow = '0 6px 16px rgba(15,23,42,0.12)'; };
+    b.onmouseout = function() { b.style.transform = 'scale(1)'; b.style.boxShadow = '0 4px 12px rgba(15,23,42,0.08)'; };
+    document.body.appendChild(b);
+    return b;
+  }
+
+  function removeBtn() {
+    var b = document.getElementById('topActionBtn');
+    if (b) b.style.display = 'none';
+  }
+
+  // Watch for class changes on body (using MutationObserver for better performance)
+  var lastClass = '';
+  setInterval(function() {
+    if (document.body.className !== lastClass) {
+      lastClass = document.body.className;
+      updateTopButton();
+    }
+  }, 200);
+  
+  // Initial call
+  setTimeout(updateTopButton, 500);
 })();
 </script>
 </body>

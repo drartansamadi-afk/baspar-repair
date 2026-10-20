@@ -16,7 +16,7 @@ async function registerServiceWorker() {
     return null;
   }
   try {
-    const reg = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+    const reg = await navigator.serviceWorker.register('./service-worker.js');
     console.log('[PUSH] Service Worker ثبت شد:', reg.scope);
     return reg;
   } catch (err) {

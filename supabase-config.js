@@ -102,13 +102,26 @@
 
   function applyFilter(q, filter) {
     if (!filter || !String(filter).trim()) return q;
-    var re = /([A-Za-z_][A-Za-z0-9_]*)\s*=\s*"([^"]*)"/g;
-    var m;
+    
+    var str = String(filter).trim();
     var found = false;
-    while ((m = re.exec(String(filter))) !== null) {
+    var m;
+
+    // 1. Pattern: field = "value"
+    var re1 = /([A-Za-z_][A-Za-z0-9_]*)\s*=\s*"([^"]*)"/g;
+    while ((m = re1.exec(str)) !== null) {
       found = true;
       q = q.eq(m[1], m[2]);
     }
+
+    // 2. Pattern: field = true/false/123 (no quotes)
+    var re2 = /([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(true|false|[0-9]+(?:\.[0-9]+)?)/g;
+    while ((m = re2.exec(str)) !== null) {
+      found = true;
+      // Convert boolean to string for TEXT columns
+      q = q.eq(m[1], String(m[2]));
+    }
+
     if (!found) {
       console.warn('[Supabase Shim] Unsupported filter ignored:', filter);
     }
@@ -148,7 +161,6 @@
 
       if (!ids.length) continue;
 
-      // For users_public, only UUIDs are valid. Skip legacy PocketBase IDs.
       if (tbl === 'users_public') {
         ids = ids.filter(function (v) {
           return UUID_RE.test(String(v));

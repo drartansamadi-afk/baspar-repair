@@ -26,13 +26,13 @@ window.applyModeClass = function() {
 
   // دکمه بازگشت هدر - در هر ۳ حالت نمایش داده شود (تعمیرات، تولید، کیفیت)
     // دکمه بازگشت هدر - در هر ۳ حالت نمایش داده شود
-  var backBtn = document.getElementById('headerBackBtn');
+  var backBtn = document.getElementById('logoutBtn');
   if (backBtn) {
     backBtn.style.display = (mode === 'repair' || mode === 'production' || mode === 'quality') ? 'inline-flex' : 'none';
   }
   
   // دکمه خروج - در هر ۳ حالت نمایش داده شود
-  var logoutBtn = document.getElementById('headerLogoutBtn');
+  var logoutBtn = document.getElementById('logoutBtn');
   if (logoutBtn) {
     logoutBtn.style.display = (mode === 'repair' || mode === 'production' || mode === 'quality') ? 'inline-flex' : 'none';
   }
@@ -94,7 +94,7 @@ window.showModeSelector = function() {
   var hdr = document.querySelector('.app-header') || document.querySelector('.hdr') || document.querySelector('header');
   if (hdr) hdr.style.display = 'none';
   
-  var backBtn = document.getElementById('headerBackBtn');
+  var backBtn = document.getElementById('logoutBtn');
   if (backBtn) backBtn.style.display = 'none';
 
   var userName = USER ? USER.name : 'کاربر';
@@ -196,10 +196,10 @@ window.selectMode = function(mode) {
   var hdr = document.querySelector('.app-header') || document.querySelector('.hdr') || document.querySelector('header');
   if (hdr) hdr.style.display = '';
   
-  var backBtn = document.getElementById('headerBackBtn');
+  var backBtn = document.getElementById('logoutBtn');
   if (backBtn) backBtn.style.display = 'inline-flex';
   
-  var logoutBtn = document.getElementById('headerLogoutBtn');
+  var logoutBtn = document.getElementById('logoutBtn');
   if (logoutBtn) logoutBtn.style.display = 'inline-flex';
   
   updateNavForMode();
@@ -283,7 +283,7 @@ window.updateHeaderText = function() {
   var titleWrap = document.querySelector('.title-wrap') || document.querySelector('.app-header .title-wrap');
   var notifBtn = document.getElementById('notifBtn');
   var pushBtn = document.getElementById('pushToggleBtn');
-  var backBtn = document.getElementById('headerBackBtn');
+  var backBtn = document.getElementById('logoutBtn');
   
   if (mode === 'repair') {
     if (titleWrap) titleWrap.style.display = '';
@@ -304,7 +304,7 @@ window.updateHeaderText = function() {
   }
 };
 function injectBackButton() {
-  var old = document.getElementById('headerBackBtn');
+  var old = document.getElementById('logoutBtn');
   if (old) old.remove();
 
   var hdr = document.querySelector('.app-header') || document.querySelector('.hdr') || document.querySelector('header');

@@ -12,8 +12,8 @@
 <script src="mold-client.js"></script>
 <script src="production-quality.js"></script>
 `n
-<script src="auth-ui-patch.js"></script>
-<script src="auth-ui-patch.js"></script>
+
+
 <script src="mode-selector.js"></script>
 <script src="excel-export.js"></script>
 <script src="chart.umd.min.js"></script>
@@ -4286,5 +4286,93 @@ window.showDTPicker = function(containerId, currentCode, currentDuration, autoMi
 
 
 
+<script>
+// ===== STRICT UI PATCH: 3-Step Screen Logic =====
+(function() {
+  window.addEventListener('DOMContentLoaded', function() {
+    // 1. استایل دکمه‌ها
+    var style = document.createElement('style');
+    style.textContent = `
+      #globalLogoutBtn { position: fixed; top: 20px; left: 20px; z-index: 9999; background: #FFF1F2; color: #E11D48; border: 1px solid #FECDD3; padding: 8px 16px; border-radius: 12px; font-family: inherit; font-weight: bold; cursor: pointer; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+      #globalLogoutBtn:hover { transform: translateY(-2px); background: #FFE4E6; }
+      #headerBackBtn { background: rgba(255,255,255,0.15); color: #fff; border: 1px solid rgba(255,255,255,0.25); padding: 6px 12px; border-radius: 8px; font-family: inherit; font-size: 12px; font-weight: bold; cursor: pointer; margin-left: 10px; display: none; }
+      #headerBackBtn:hover { background: rgba(255,255,255,0.25); }
+    `;
+    document.head.appendChild(style);
+
+    // 2. ساخت دکمه خروج
+    var logoutBtn = document.createElement('button');
+    logoutBtn.id = 'globalLogoutBtn';
+    logoutBtn.innerHTML = '⏻ خروج';
+    logoutBtn.onclick = function() {
+      if(confirm('از حساب خارج می‌شوید؟')) {
+        if (window.pb && window.pb.authStore) window.pb.authStore.clear();
+        localStorage.clear();
+        location.reload();
+      }
+    };
+    document.body.appendChild(logoutBtn);
+
+    // 3. ساخت دکمه بازگشت
+    var backBtn = document.createElement('button');
+    backBtn.id = 'headerBackBtn';
+    backBtn.innerHTML = '⟵ بازگشت';
+    backBtn.onclick = function() {
+      localStorage.removeItem('CURRENT_MODE');
+      localStorage.removeItem('baspar_mode');
+      window.CURRENT_MODE = null;
+      if (typeof showModeSelector === 'function') showModeSelector();
+    };
+
+    // 4. منطق دقیق نمایش
+    function updateUI() {
+      var loginScreen = document.getElementById('loginScreen');
+      var isLoggedIn = loginScreen && loginScreen.style.display === 'none';
+      
+      // مرحله 1: صفحه لاگین (هیچ دکمه‌ای نمایش داده نمی‌شود)
+      if (!isLoggedIn) {
+        logoutBtn.style.display = 'none';
+        if (backBtn.parentNode) backBtn.parentNode.removeChild(backBtn);
+        return;
+      }
+
+      var isSelector = document.body.classList.contains('mode-selector-active');
+      var isInsideTab = document.body.classList.contains('mode-repair') || 
+                        document.body.classList.contains('mode-production') || 
+                        document.body.classList.contains('mode-quality');
+
+      // مرحله 2: صفحه سه تب (فقط دکمه خروج)
+      if (isSelector) {
+        logoutBtn.style.display = 'block';
+        if (backBtn.parentNode) backBtn.parentNode.removeChild(backBtn);
+      } 
+      // مرحله 3: داخل تب (فقط دکمه بازگشت در هدر)
+      else if (isInsideTab) {
+        logoutBtn.style.display = 'none';
+        var header = document.querySelector('.app-header');
+        if (header && !backBtn.parentNode) {
+          var logo = header.querySelector('.logo-mini');
+          if (logo) header.insertBefore(backBtn, logo);
+          else header.insertBefore(backBtn, header.firstChild);
+        }
+        backBtn.style.display = 'inline-flex';
+      } else {
+        logoutBtn.style.display = 'none';
+        if (backBtn.parentNode) backBtn.parentNode.removeChild(backBtn);
+      }
+    }
+
+    // 5. نظارت بر تغییرات صفحه
+    var observer = new MutationObserver(function() { setTimeout(updateUI, 50); });
+    observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+    var loginEl = document.getElementById('loginScreen');
+    if (loginEl) {
+      var loginObserver = new MutationObserver(function() { setTimeout(updateUI, 50); });
+      loginObserver.observe(loginEl, { attributes: true, attributeFilter: ['style', 'class'] });
+    }
+    setTimeout(updateUI, 200);
+  });
+})();
+</script>
 </body>
 </html>

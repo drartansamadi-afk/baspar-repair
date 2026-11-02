@@ -1,5 +1,12 @@
-// ===== UI CONTROLLER: Dynamic Buttons =====
+// ===== UI CONTROLLER: Prevent Auto-Redirect & Add Buttons =====
 (function() {
+  // 1. پاک کردن حافظه قبل از اینکه mode-selector.js اجرا شود
+  if (localStorage.getItem('sb-auth') || localStorage.getItem('pocketbase_auth')) {
+    window.CURRENT_MODE = null;
+    localStorage.removeItem('CURRENT_MODE');
+    localStorage.removeItem('baspar_mode');
+  }
+
   window.addEventListener('DOMContentLoaded', function() {
     var style = document.createElement('style');
     style.textContent = `
@@ -19,7 +26,7 @@
     logoutBtn.onclick = function() {
       if(confirm('از حساب کاربری خارج می‌شوید؟')) {
         if (window.pb && window.pb.authStore) window.pb.authStore.clear();
-        localStorage.clear(); // پاک کردن کامل حافظه
+        localStorage.clear();
         location.reload();
       }
     };
@@ -41,10 +48,12 @@
 
     function updateUI() {
       var loginScreen = document.getElementById('loginScreen');
-      var isLoggedIn = !loginScreen || loginScreen.style.display === 'none';
+      var isLoggedIn = loginScreen && (loginScreen.style.display === 'none' || loginScreen.classList.contains('show'));
       
+      // اطمینان از اینکه دکمه خروج در صفحه لاگین نمایش داده نشود
       if (!isLoggedIn) {
         if (logoutBtn.parentNode) logoutBtn.parentNode.removeChild(logoutBtn);
+        if (backBtn.parentNode) backBtn.parentNode.removeChild(backBtn);
         return;
       }
 
@@ -78,7 +87,7 @@
     var loginScreen = document.getElementById('loginScreen');
     if (loginScreen) {
       var loginObserver = new MutationObserver(function() { setTimeout(updateUI, 50); });
-      loginObserver.observe(loginScreen, { attributes: true, attributeFilter: ['style'] });
+      loginObserver.observe(loginScreen, { attributes: true, attributeFilter: ['style', 'class'] });
     }
     
     setTimeout(updateUI, 200);

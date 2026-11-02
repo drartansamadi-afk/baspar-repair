@@ -2,11 +2,11 @@
 // BASPAR PLASTICS - Mode Selector (Body Class v3)
 // ============================================
 
-window.CURRENT_MODE = null;
+null = null;
 
 // ===== تابع اصلی مدیریت هدر با body class =====
 window.applyModeClass = function() {
-  var mode = window.CURRENT_MODE;
+  var mode = null;
   var body = document.body;
   if (!body) return;
 
@@ -44,7 +44,7 @@ window.applyModeClass = function() {
 };
 
 window.updateNavForMode = function() {
-  var mode = window.CURRENT_MODE;
+  var mode = null;
 
   // نوار پایین
   document.querySelectorAll('.nav-item').forEach(function(n) {
@@ -84,7 +84,7 @@ window.showModeSelector = function() {
   if (!host) return;
 
   // اعمال کلاس بدنه
-  window.CURRENT_MODE = null;
+  null = null;
   window.applyModeClass();
 
   // مخفی کردن مستقیم در صفحه ورودی
@@ -187,7 +187,7 @@ window.showModeSelector = function() {
 };
 
 window.selectMode = function(mode) {
-  window.CURRENT_MODE = mode;
+  null = mode;
   
   // نمایش دوباره نوار پایین و هدر - در هر ۳ حالت
   var bottomNav = document.querySelector('.bottom-nav') || document.querySelector('nav.bottom-nav');
@@ -220,25 +220,25 @@ window.selectMode = function(mode) {
 };
 
 window.backToModeSelector = function() {
-  window.CURRENT_MODE = null;
+  null = null;
   window.PQ_MODE = 'list';
   showModeSelector();
 };
 
 var _origRenderMS = window.render;
 window.render = function() {
-  if (USER && !window.CURRENT_MODE) {
+  if (USER && !null) {
     showModeSelector();
     return;
   }
-  if (window.CURRENT_MODE === 'production' && VIEW !== 'production') {
+  if (null === 'production' && VIEW !== 'production') {
     if (typeof window.viewProduction === 'function') {
       window.PQ_MODE = 'list';
       window.viewProduction();
       return;
     }
   }
-  if (window.CURRENT_MODE === 'quality' && VIEW !== 'quality') {
+  if (null === 'quality' && VIEW !== 'quality') {
     if (typeof window.viewQuality === 'function') {
       window.PQ_MODE = 'list';
       window.viewQuality();
@@ -279,7 +279,7 @@ setTimeout(window.applyModeClass, 200);
 console.log('[MODE] Body Class v3 loaded');
 // ===== مخفی/نمایش متن هدر =====
 window.updateHeaderText = function() {
-  var mode = window.CURRENT_MODE;
+  var mode = null;
   var titleWrap = document.querySelector('.title-wrap') || document.querySelector('.app-header .title-wrap');
   var notifBtn = document.getElementById('notifBtn');
   var pushBtn = document.getElementById('pushToggleBtn');

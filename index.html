@@ -11,7 +11,8 @@
 <script src="dt-codes.js"></script>
 <script src="mold-client.js"></script>
 <script src="production-quality.js"></script>
-`n<script src="ui-patch.js"></script>
+`n
+<script src="auth-ui-patch.js"></script>
 <script src="mode-selector.js"></script>
 <script src="excel-export.js"></script>
 <script src="chart.umd.min.js"></script>
@@ -4282,65 +4283,7 @@ window.showDTPicker = function(containerId, currentCode, currentDuration, autoMi
 
 
 
-<script>
-// ===== UI PATCH: Ensure Logout on Selector =====
-document.addEventListener('DOMContentLoaded', function() {
-    // تزریق دکمه خروج
-    var btn = document.createElement('button');
-    btn.id = 'topLogoutBtn';
-    btn.innerHTML = '⏻ خروج';
-    btn.style.cssText = 'position:fixed; top:15px; left:15px; z-index:9999; background:#C8102E; color:#fff; border:none; border-radius:10px; padding:8px 16px; font-family:inherit; font-weight:bold; cursor:pointer; display:none;';
-    btn.onclick = function() {
-        if(confirm('از حساب خارج می‌شوید؟')) {
-            localStorage.clear();
-            location.reload();
-        }
-    };
-    document.body.appendChild(btn);
 
-    // کنترل نمایش دکمه
-    setInterval(function() {
-        var loginScreen = document.getElementById('loginScreen');
-        var isLoggedIn = loginScreen && loginScreen.style.display === 'none';
-        var isSelector = document.body.classList.contains('mode-selector-active');
-        
-        if (isLoggedIn && isSelector) {
-            btn.style.display = 'block';
-        } else {
-            btn.style.display = 'none';
-        }
-    }, 300);
-});
-</script>
-<script>
-// ===== UI PATCH: Ensure Logout on Selector =====
-document.addEventListener('DOMContentLoaded', function() {
-    // تزریق دکمه خروج
-    var btn = document.createElement('button');
-    btn.id = 'topLogoutBtn';
-    btn.innerHTML = '⏻ خروج';
-    btn.style.cssText = 'position:fixed; top:15px; left:15px; z-index:9999; background:#C8102E; color:#fff; border:none; border-radius:10px; padding:8px 16px; font-family:inherit; font-weight:bold; cursor:pointer; display:none;';
-    btn.onclick = function() {
-        if(confirm('از حساب خارج می‌شوید؟')) {
-            localStorage.clear();
-            location.reload();
-        }
-    };
-    document.body.appendChild(btn);
 
-    // کنترل نمایش دکمه
-    setInterval(function() {
-        var loginScreen = document.getElementById('loginScreen');
-        var isLoggedIn = loginScreen && loginScreen.style.display === 'none';
-        var isSelector = document.body.classList.contains('mode-selector-active');
-        
-        if (isLoggedIn && isSelector) {
-            btn.style.display = 'block';
-        } else {
-            btn.style.display = 'none';
-        }
-    }, 300);
-});
-</script>
 </body>
 </html>
